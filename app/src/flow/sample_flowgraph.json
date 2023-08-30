@@ -1,0 +1,34 @@
+{
+    "nodes": [
+      {
+        "id":"A",
+        "name": "A",
+        "category": "sources",
+        "type": "chirpstack/file",
+        "config": { "filepath": "./abc.json" }
+      },
+      {
+        "id":"B",
+        "name": "B",
+        "category": "processors",
+        "type": "chirpstack/decoders/default"
+      },
+      {
+        "id":"C",
+        "name": "C",
+        "category": "sink",
+        "type": "influx",
+        "config": {
+          "url": "",
+          "database": "",
+          "username": "",
+          "password": ""
+        }
+      }
+    ],
+    "edges": [
+      { "from": "A", "to": "B" },
+      { "from": "B", "to": "C" }
+    ]
+  }
+  
