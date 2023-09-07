@@ -1,6 +1,11 @@
 use anyhow::Context;
 use influxdb::InfluxDbWriteable;
 use serde::Deserialize;
+use crate::flow::sinks::EventSink;
+use crate::common::chirpstack::{UplinkEvent};
+use crate::flow::sinks::adapters::chirpstack::UplinkEventInfluxdbMeasurement;
+use anyhow::Result;
+use async_trait::async_trait;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct InfluxdbConf {
@@ -40,5 +45,21 @@ impl InfluxdbSink {
             .await
             .with_context(|| format!("Unable to write to influxdb"))?;
         return Ok(write_result);
+    }
+}
+
+
+#[async_trait]
+impl EventSink<UplinkEvent> for InfluxdbSink {
+    async fn write_event(&self, event_data: UplinkEvent) -> Result<bool, anyhow::Error> {
+        let influx_measurement: UplinkEventInfluxdbMeasurement = event_data.into();
+
+        // Store data in db
+        let _ = self
+            .write(String::from("uplinks"), influx_measurement)
+            .await
+            .with_context(|| format!("Unable to write measurement to influxdb"))?;
+
+        Ok(true)
     }
 }
