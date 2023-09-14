@@ -1,9 +1,9 @@
 use chrono::{DateTime, Utc};
-use serde::{Deserialize};
+use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use uuid::Uuid;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(untagged)]
 pub enum ChirpstackEvents {
     UPLINK(UplinkEvent),
@@ -11,7 +11,13 @@ pub enum ChirpstackEvents {
     JOIN(JoinEvent),
 }
 
-#[derive(Debug, Deserialize)]
+impl Into<Value> for ChirpstackEvents {
+    fn into(self) -> Value {
+        serde_json::to_value(self).unwrap_or_else(|_| serde_json::json!(null))
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[allow(non_snake_case)]
 pub struct DeviceInfo {
     pub tenantId: Uuid,
@@ -25,7 +31,7 @@ pub struct DeviceInfo {
     pub tags: Map<String, Value>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[allow(non_camel_case_types)]
 pub enum LocationSource {
     // Unknown.
@@ -50,7 +56,7 @@ pub enum LocationSource {
     GEO_RESOLVER_WIFI = 6,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Location {
     pub latitude: f64,
     pub longitude: f64,
@@ -59,7 +65,7 @@ pub struct Location {
     pub accuracy: Option<f32>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[allow(non_camel_case_types)]
 pub enum CRCStatus {
     // No CRC.
@@ -72,7 +78,7 @@ pub enum CRCStatus {
     CRC_OK = 2,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[allow(non_snake_case)]
 pub struct RXInfo {
     pub gatewayId: String,
@@ -87,7 +93,7 @@ pub struct RXInfo {
     pub crcStatus: CRCStatus,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[allow(non_camel_case_types)]
 pub enum CodeRate {
     CR_UNDEFINED = 0,
@@ -106,7 +112,7 @@ pub enum CodeRate {
 }
 
 #[allow(non_snake_case)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct LoraModulationInfo {
     pub bandwidth: u32,
     pub spreadingFactor: u32,
@@ -116,14 +122,14 @@ pub struct LoraModulationInfo {
 }
 
 #[allow(non_snake_case)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct FskModulationInfo {
     pub frequencyDeviation: u32,
     pub datarate: u32,
 }
 
 #[allow(non_snake_case)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct LrFhssModulationInfo {
     pub operatingChannelWidth: u32,
     pub codeRateLegacy: String,
@@ -131,7 +137,7 @@ pub struct LrFhssModulationInfo {
     pub gridSteps: u32,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[allow(non_camel_case_types)]
 pub enum Modulation {
     lora(LoraModulationInfo),
@@ -139,13 +145,13 @@ pub enum Modulation {
     lr_fhss(LrFhssModulationInfo),
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TXInfo {
     pub frequency: u32,
     pub modulation: Modulation,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[allow(non_snake_case)]
 pub struct UplinkEvent {
     pub deduplicationId: Uuid,
@@ -162,7 +168,13 @@ pub struct UplinkEvent {
     pub txInfo: TXInfo,
 }
 
-#[derive(Debug, Deserialize)]
+impl From<Value> for UplinkEvent {
+    fn from(value: Value) -> Self {
+        serde_json::from_value(value).expect("Failed to convert Value to UplinkEvent")
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[allow(non_snake_case)]
 pub struct StatusEvent {
     pub deduplicationId: Uuid,
@@ -175,7 +187,7 @@ pub struct StatusEvent {
 }
 
 #[allow(non_snake_case)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RelayRxInfo {
     pub devEui: String,
     pub frequency: u32,
@@ -185,7 +197,7 @@ pub struct RelayRxInfo {
     pub worChannel: u32,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[allow(non_snake_case)]
 pub struct JoinEvent {
     pub deduplicationId: Uuid,

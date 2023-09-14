@@ -1,60 +1,39 @@
+#![forbid(unsafe_code)]
 mod common;
+mod config;
 mod flow;
 
-use crate::common::chirpstack::ChirpstackEvents;
-use crate::flow::sinks::influxdb::{InfluxdbConf, InfluxdbSink};
-use crate::flow::sinks::EventSink;
 use anyhow::{Context, Result};
-use flow::sources::chirpstack::event_files::read_events_file;
+use config::Config;
+use flow::flowgraph::start_single_source_multi_sink_flow;
+use flow::sources::chirpstack::event_files::ChirpstackEventFileSource;
 use std::path::PathBuf;
+
+use std::sync::Arc;
+
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
-    test().await?;
+    //Get config path
+    let config_path = std::env::args().nth(1).expect("No config file provided");
+    let config_file_name = PathBuf::from(config_path);
+
+    //Parse config
+    let config: Config = config::Config::new(&config_file_name)
+        .with_context(|| format!("Unable to parse config file"))?;
+
+    test(config.chirpstack_source_file_path.clone()).await?;
     Ok(())
 }
 
-async fn test() -> Result<(), anyhow::Error> {
-    //Parse input argument as the filename
-    let input_path = std::env::args().nth(1).expect("No input file provided");
-    let input_file_name = PathBuf::from(input_path);
+async fn test(event_file_path: PathBuf) -> Result<(), anyhow::Error> {
+    let source = Arc::new(ChirpstackEventFileSource {
+        file_path: event_file_path,
+    });
 
-    //Parse second input as destination host and port
-    let influxdb_host = std::env::args()
-        .nth(2)
-        .expect("No influxdb host:port provided");
+    let sink1 = Arc::new(flow::sinks::console::ConsoleSink {});
+    let sinks = vec![sink1.clone()];
 
-    // Parse file for data
-    let events = read_events_file(&input_file_name)
-        .with_context(|| format!("Chirpstack Events could not be parsed"))?;
-
-    println!("Events found : {}", events.len());
-
-    //Prepare Influxdb sink
-    let influxdb_conf = InfluxdbConf {
-        url: format!("http://{}", influxdb_host).to_string(),
-        database: "default_bucket".to_string(),
-        token: "no_secrets".to_string(),
-    };
-    let influxdb_sink: InfluxdbSink = InfluxdbSink::new(&influxdb_conf);
-
-    // Process data
-    for event in events {
-        match event {
-            ChirpstackEvents::UPLINK(uplink) => {
-                // Store data in db
-                let write_res = influxdb_sink
-                    .write_event(uplink)
-                    .await
-                    .with_context(|| format!("Unable to write measurement to influxdb"))?;
-
-                println!("Write result: {:?}", write_res);
-            }
-            _ => {
-                println!("Ignored unknown event type");
-            }
-        }
-    }
-
+    start_single_source_multi_sink_flow(source, sinks).await?;
     Ok(())
 }
