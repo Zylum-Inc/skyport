@@ -1,12 +1,10 @@
 use super::EventSink;
 use async_trait::async_trait;
 use tokio::sync::broadcast::{Receiver, error::RecvError};
-use serde_json::Value;
 pub struct ConsoleSink {}
 
 #[async_trait]
 impl EventSink for ConsoleSink {
-    type EventType = serde_json::Value;
     async fn write_event(&self, event_data: serde_json::Value) -> Result<bool, anyhow::Error> {
         println!("ConsoleSink: {:?}", event_data);
         return Ok(true);

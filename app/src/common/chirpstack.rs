@@ -13,7 +13,15 @@ pub enum ChirpstackEvents {
 
 impl Into<Value> for ChirpstackEvents {
     fn into(self) -> Value {
-        serde_json::to_value(self).unwrap_or_else(|_| serde_json::json!(null))
+        let res = serde_json::to_value(self).unwrap_or_else(|_| serde_json::json!(null));
+        res
+    }
+}
+
+impl From<Value> for ChirpstackEvents {
+    fn from(value: Value) -> Self {
+        let res = serde_json::from_value(value).expect("Failed to convert Value to ChirpstackEvents");
+        res
     }
 }
 
@@ -170,7 +178,8 @@ pub struct UplinkEvent {
 
 impl From<Value> for UplinkEvent {
     fn from(value: Value) -> Self {
-        serde_json::from_value(value).expect("Failed to convert Value to UplinkEvent")
+        let res = serde_json::from_value(value).expect("Failed to convert Value to UplinkEvent");
+        res
     }
 }
 

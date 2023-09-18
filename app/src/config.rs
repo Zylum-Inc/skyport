@@ -1,10 +1,12 @@
 use anyhow::{Context};
 use serde::{Deserialize};
 use std::{fs::File, io::BufReader, path::PathBuf};
+use crate::flow::sinks::pg::PostgresConf;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
-    pub chirpstack_source_file_path: PathBuf,
+    pub source_chirpstack_events_file: PathBuf,
+    pub sink_pg: Option<PostgresConf>,
 }
 
 impl Config {

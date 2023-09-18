@@ -26,8 +26,6 @@ impl ChirpstackEventFileSource {
 #[async_trait]
 impl EventSource for ChirpstackEventFileSource {
     
-    type EventType = ChirpstackEvents;
-
     async fn read_events(
         &self,
         output_events: Sender<Value>,
@@ -36,7 +34,10 @@ impl EventSource for ChirpstackEventFileSource {
             .read_events_file()
             .with_context(|| format!("Chirpstack Events could not be parsed"))?;
         for event in events {
-            output_events.send(event.into())?;
+            let data: Value = event.into();
+            // println!("Sending: {:?}", data);
+            output_events.send(data)?;
+            // break;
         }
         Ok(())
     }

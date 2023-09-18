@@ -1,13 +1,14 @@
-use crate::common::chirpstack::UplinkEvent;
-use crate::flow::sinks::adapters::chirpstack::UplinkEventInfluxdbMeasurement;
 use crate::flow::sinks::EventSink;
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use influxdb::InfluxDbWriteable;
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 use serde_json::Value;
 use tokio::sync::broadcast::Receiver;
+
+use chrono::{DateTime, Utc};
+use crate::common::chirpstack::{RXInfo, UplinkEvent};
 
 
 #[derive(Debug, Deserialize, Clone)]
@@ -53,8 +54,7 @@ impl InfluxdbSink {
 
 #[async_trait]
 impl EventSink for InfluxdbSink {
-    type EventType = UplinkEvent;
-    async fn write_event(&self, event_data: UplinkEvent) -> Result<bool, anyhow::Error> {
+    async fn write_event(&self, event_data: serde_json::Value) -> Result<bool, anyhow::Error> {
         let influx_measurement: UplinkEventInfluxdbMeasurement = event_data.into();
 
         // Store data in db
@@ -70,12 +70,56 @@ impl EventSink for InfluxdbSink {
         // Process data
         while let Ok(uplink_event) = input_events.recv().await {
             // Store data in db
-            let parsed_data: Self::EventType = uplink_event.into();
             let _ = self
-                .write_event(parsed_data)
+                .write_event(uplink_event)
                 .await
                 .with_context(|| format!("Unable to write measurement to influxdb"))?;
         }
         Ok(())
+    }
+}
+
+
+#[derive(Debug, Serialize, Deserialize, InfluxDbWriteable)]
+pub struct UplinkEventInfluxdbMeasurement {
+    pub time: DateTime<Utc>,
+
+    pub highest_rssi: i32,
+
+    pub latitude: f64,
+
+    pub longitude: f64,
+
+    #[influxdb(tag)]
+    pub device_name: String,
+
+    #[influxdb(tag)]
+    pub dev_eui: String,
+}
+
+impl From<UplinkEvent> for UplinkEventInfluxdbMeasurement {
+    fn from(event: UplinkEvent) -> Self {
+        //Find the rxinfo with highest rssi
+        let mut highest_rssi_receiver: RXInfo = event.rxInfo[0].clone();
+        for rxinfo in event.rxInfo {
+            if rxinfo.rssi > highest_rssi_receiver.rssi {
+                highest_rssi_receiver = rxinfo;
+            }
+        }
+
+        return UplinkEventInfluxdbMeasurement {
+            time: event.time,
+            highest_rssi: highest_rssi_receiver.rssi,
+            latitude: highest_rssi_receiver.location.latitude,
+            longitude: highest_rssi_receiver.location.longitude,
+            device_name: event.deviceInfo.deviceName,
+            dev_eui: event.deviceInfo.devEui,
+        };
+    }
+}
+
+impl From<Value> for UplinkEventInfluxdbMeasurement {
+    fn from(value: Value) -> Self {
+        serde_json::from_value(value).unwrap()
     }
 }
