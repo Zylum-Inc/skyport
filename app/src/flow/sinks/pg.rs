@@ -35,7 +35,7 @@ impl From<UplinkEvent> for PostgresEventRecord {
     fn from(event: UplinkEvent) -> Self {
         PostgresEventRecord {
             event_id: event.deduplicationId,
-            event_time: chrono::Utc::now(),
+            event_time: event.time,
             device_id: event.deviceInfo.devEui.clone(),
             device_name: event.deviceInfo.deviceName.clone(),
             event_type: "UPLINK".to_string(),

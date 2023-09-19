@@ -5,6 +5,7 @@ use serde::Deserialize;
 use serde_json::Value;
 use std::{fs::File, io::BufReader, path::PathBuf};
 use tokio::sync::broadcast::Sender;
+use tokio::time::{sleep, Duration};
 
 #[derive(Debug, Deserialize)]
 pub struct ChirpstackEventFileSource {
@@ -37,6 +38,8 @@ impl EventSource for ChirpstackEventFileSource {
             let data: Value = event.into();
             // println!("Sending: {:?}", data);
             output_events.send(data)?;
+            // Sleep so as not to cause the channel sinks to lag
+            sleep(Duration::from_millis(500)).await;
             // break;
         }
         Ok(())
